@@ -50,3 +50,7 @@ c++
 cc
 config.sh
 lcgenv.sh
+
+# Eclipse
+*.project
+*.pydevproject

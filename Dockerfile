@@ -9,7 +9,7 @@ FROM olantwin/ship-base:191114
 COPY . /FairShip
 
 # Build FairShip
-RUN aliBuild -c shipdist/ --defaults fairship build FairShip --no-local ROOT
+RUN aliBuild -c shipdist/ --defaults fairship-2018 build FairShip --no-local ROOT
 
 # Setup environment. Setup the command that will be invoked when your docker
 # image is run. Note that this requires running with `docker run -t` so that

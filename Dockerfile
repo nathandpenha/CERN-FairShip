@@ -3,7 +3,7 @@
 #
 # Prebuilt images available on Docker Hub at:
 # https://hub.docker.com/r/olantwin/fairship/
-FROM olantwin/ship-base:200212-2018
+FROM olantwin/ship-base:200213-2018
 
 # Copy FairShip scripts
 COPY . /FairShip

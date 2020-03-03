@@ -1,0 +1,17 @@
+unit-tests:
+    stage: test
+    cache:
+        key: one-key-to-rull-them-all
+        paths:
+            - cache/
+    image: kongyitian/new-fairship:200228-tue-fairship
+    before_script:
+        - pip install -r conditionsDatabase/requirements.txt
+        - git checkout $CI_COMMIT_REF_NAME
+        - git pull https://d.user:getcode1@ooti-projects.win.tue.nl/gitlab/cern-st-2019/implementation.git        
+        - chmod +x conditionsDatabase/start_mongodb_locally.sh
+        - ./conditionsDatabase/start_mongodb_locally.sh 
+    script:
+        # start command from here
+        # directory is /builds/gitlab/cern-st-2019/implementation/
+        - cd conditionsDatabase/tests

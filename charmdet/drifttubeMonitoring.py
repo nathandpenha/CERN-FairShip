@@ -1,7 +1,22 @@
 #import yep
 import ROOT,os,time,sys,operator,atexit
 ROOT.gROOT.ProcessLine('typedef std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, std::vector<MufluxSpectrometerHit*>>>> nestedList;')
+#---------log for benchmarking-----------------------------------------------------------
+import logging
+# Define log file to record output of method execution time as benchmarking
+log_file = logging.FileHandler(filename='benchmarking.log', mode='a', encoding='utf-8')
+fmt = logging.Formatter()
+log_file.setFormatter(fmt)
 
+# Define logger and logger type
+logger = logging.Logger(name='benchmarking', level=logging.INFO)
+logger.addHandler(log_file)
+# logger.info is used to write msg to the log file
+# Write the log file's header.
+logger.info(msg=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+logger.info(msg='Benchmarking start - Record code execution time :')
+logger.info(msg='Method_name     wall_time    cpu_time')
+#--------------------------------------------------------------------
 from decorators import *
 import __builtin__ as builtin
 ROOT.gStyle.SetPalette(ROOT.kGreenPink)
@@ -164,6 +179,10 @@ survey = {} # X survey[xxx][1] Y survey[xxx][2] Z survey[xxx][0]
 daniel = {}
 # For T1 and 2, the survey target is placed above/below the endplates, offset in y. 
 # For T3 it is placed 7cm in front and for T4 7cm behind the endplate, so there is an offset in z
+
+wall_time_start = time.time()
+cpu_time_start = time.clock()
+
 survey['T1_MA_01']=[ 9.0527, 0.2443, 0.7102 ]
 daniel['T1_MA_01']=[244.30,531.85,9052.70]
 survey['T1_MA_02']=[ 9.0502, -0.2078, 0.7092  ]
@@ -271,6 +290,10 @@ survey['RPC4_L']= [ 19.7371, 1.1610, 1.1938 ]
 survey['RPC4_R']= [ 19.7410, -1.2670, 1.1979 ]
 survey['RPC5_L']= [ 20.2852, 1.1677, 1.1945 ]
 survey['RPC5_R']= [ 20.2891, -1.2614, 1.1943 ]
+
+cpu_time_end = time.clock()
+wall_time_end = time.time()
+logger.info(msg='Get daniel and survey by hard code%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
 Lcorrection={}
 # length of the bolt 150mm on the top and 50mm on the bottom
@@ -5409,8 +5432,16 @@ def makeAlignmentConstantsPersistent():
         vbot,vtop = strawPositionsBotTop[straw]
         strawPositionsP[straw]={'top':[vtop[0],vtop[1],vtop[2]],'bot':[vbot[0],vbot[1],vbot[2]]}
     alignConstants={'strawPositions':strawPositionsP,'alignCorrection':alignCorrection}
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     pkl = Pickler(ftemp)
     pkl.dump(alignConstants,'alignConstants')
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='add alignConstants to file%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
 def importAlignmentConstants():
     global alignConstants
@@ -5422,14 +5453,28 @@ def importAlignmentConstants():
             strawPositionsBotTop[hit.GetDetectorID()]=correctAlignment(hit)
         print "importing alignment constants from code"
         return
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     upkl    = Unpickler(sTree.GetCurrentFile())
     try:
+
         alignConstants = upkl.load('alignConstants')
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='importAlignmentConstants from file%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
         print "importing alignment constants from file",sTree.GetCurrentFile().GetName()
         strawPosition()
     except:
         print "loading of alignment constants failed for file",sTree.GetCurrentFile().GetName()
 def importRTrel():
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     for fname in fnames:
         if len(fnames)==1: f=sTree.GetCurrentFile()
         else:   f = ROOT.TFile.Open(fname)
@@ -5444,6 +5489,11 @@ def importRTrel():
         except:
             print "loading of RT failed for file",rname
         if len(fnames)!=1: f.Close()
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='importRTrel%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     importRTCorrection()
 def importRTCorrection():
     pars = {}
@@ -5507,7 +5557,16 @@ RTrelations = {}
 zeroFieldData=['SPILLDATA_8000_0515970150_20180715_220030.root']
 def init(database='muflux_RTrelations.pkl',remake=False,withReco=False):
     global withTDC,RTrelations
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     if os.path.exists(database): RTrelations = pickle.load(open(database))
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='loading_muflux_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     N = sTree.GetEntries()
     if not RTrelations.has_key(rname) or remake:
         withTDC = False
@@ -5518,8 +5577,17 @@ def init(database='muflux_RTrelations.pkl',remake=False,withReco=False):
         RTrelations[rname] =  {'tMinAndTmax':h['tMinAndTmax']}
         for s in h['tMinAndTmax']: RTrelations[rname]['rt'+s] = h['rt'+s]
         fpkl=open(database,'w')
+
+        wall_time_start = time.time()
+        cpu_time_start = time.clock()
+
         pickle.dump(RTrelations,fpkl)
         fpkl.close()
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='writing_muflux_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     else:
         h['tMinAndTmax'] = RTrelations[rname]['tMinAndTmax']
         for s in h['tMinAndTmax']: h['rt'+s] = RTrelations[rname]['rt'+s]
@@ -7814,7 +7882,16 @@ if options.command == "":
     elif sTree.GetCurrentFile().GetKey('RT'):
         importRTrel()
     elif os.path.exists(database):
+
+        wall_time_start = time.time()
+        cpu_time_start = time.clock()
+
         RTrelations = pickle.load(open(database))
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='loading_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
         if not RTrelations.has_key(rname):
             print "You should run init() to determine the RT relations or use _RT file"
         else:

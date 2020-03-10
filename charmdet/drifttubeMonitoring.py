@@ -1,6 +1,23 @@
 #import yep
 import ROOT,os,time,sys,operator,atexit
 ROOT.gROOT.ProcessLine('typedef std::unordered_map<int, std::unordered_map<int, std::unordered_map<int, std::vector<MufluxSpectrometerHit*>>>> nestedList;')
+#---------Set up logging for benchmarking-----------------------------------------------------------
+import logging
+# Define log file to record output of method execution time as benchmarking
+log_file = logging.FileHandler(filename='benchmarking.log', mode='a', encoding='utf-8')
+fmt = logging.Formatter()
+log_file.setFormatter(fmt)
+
+# Define logger and logger type
+logger = logging.Logger(name='benchmarking', level=logging.INFO)
+logger.addHandler(log_file)
+
+# logger.info is used to write msg to the log file
+# Write the log file's header.
+logger.info(msg=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+logger.info(msg='Benchmarking start - Record code execution time :')
+logger.info(msg='Method_name     wall_time    cpu_time')
+#--------------------------------------------------------------------
 
 from decorators import *
 import __builtin__ as builtin
@@ -173,8 +190,16 @@ daniel = {}
 
 api_factory = APIFactory()
 conditionsDB = api_factory.construct_DB_API()
+
+wall_time_start = time.time()
+cpu_time_start = time.clock()
+
 daniel = (conditionsDB.get_condition_by_name_and_tag("muflux/driftTubes", "strawPositions", "muflux/driftTubes_daniel_2020-03-23 18:14"))["values"]
 survey = (conditionsDB.get_condition_by_name_and_tag("muflux/driftTubes", "strawPositions", "muflux/driftTubes_survey_2020-03-23 18:14"))["values"]
+
+cpu_time_end = time.clock()
+wall_time_end = time.time()
+logger.info(msg='Get daniel and survey from CDB%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
 Lcorrection={}
 # length of the bolt 150mm on the top and 50mm on the bottom
@@ -4510,7 +4535,14 @@ slopeY = {2:[0,0,0,0]}
 withCorrections=True
 if MCdata: withCorrections=False
 if withCorrections:
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     alignCorrectionTMP = (conditionsDB.get_condition_by_name_and_tag("muflux/driftTubes", "alignCorrection", "muflux/driftTubes_align_2020-03-23"))["values"]
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='Get alignCorrection from CDB%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
     # Convert the alignCorrection dict with str keys to a version with int keys
     for i in range (0, len(alignCorrectionTMP)):
@@ -5281,7 +5313,20 @@ def makeAlignmentConstantsPersistent():
         vbot,vtop = strawPositionsBotTop[straw]
         strawPositionsP[straw]={'top':[vtop[0],vtop[1],vtop[2]],'bot':[vbot[0],vbot[1],vbot[2]]}
     alignConstants={'strawPositions':strawPositionsP,'alignCorrection':alignCorrection}
+
+    # Start timestamp of wall and cpu time; wall time is computer time
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     conditionsDB.add_condition("muflux/driftTubes", "alignConstants", "TUE2019", "2020-03-24", loads(dumps(alignConstants)))
+
+    # End timestamp of wall and cpu time; wall time is computer time
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+
+    # Record time difference to the log as an execution performance benchmark
+    logger.info(msg='makeAlignmentConstantsPersistent%15.6f%13.6f' % (
+    wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
 def importAlignmentConstants():
     global alignConstants
@@ -5293,13 +5338,26 @@ def importAlignmentConstants():
             strawPositionsBotTop[hit.GetDetectorID()]=correctAlignment(hit)
         print "importing alignment constants from code"
         return
+
     try:
+        wall_time_start = time.time()
+        cpu_time_start = time.clock()
+
         alignConstants = ast.literal_eval(json.dumps((conditionsDB.get_condition_by_name_and_tag("muflux/driftTubes", "alignConstants", "TUE2019"))["values"]))
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='importAlignmentConstants from CDB%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
         print "importing alignment constants from file",sTree.GetCurrentFile().GetName()
         strawPosition()
     except:
         print "loading of alignment constants failed for file",sTree.GetCurrentFile().GetName()
 def importRTrel():
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     for fname in fnames:
         if len(fnames)==1: f=sTree.GetCurrentFile()
         else:   f = ROOT.TFile.Open(fname)
@@ -5314,6 +5372,11 @@ def importRTrel():
         except:
             print "loading of RT failed for file",rname
         if len(fnames)!=1: f.Close()
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='importRTrel%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     importRTCorrection()
 def importRTCorrection():
     pars = {}
@@ -5377,7 +5440,16 @@ RTrelations = {}
 zeroFieldData=['SPILLDATA_8000_0515970150_20180715_220030.root']
 def init(database='muflux_RTrelations.pkl',remake=False,withReco=False):
     global withTDC,RTrelations
+
+    wall_time_start = time.time()
+    cpu_time_start = time.clock()
+
     if os.path.exists(database): RTrelations = pickle.load(open(database))
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='loading_muflux_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     N = sTree.GetEntries()
     if not RTrelations.has_key(rname) or remake:
         withTDC = False
@@ -5388,8 +5460,17 @@ def init(database='muflux_RTrelations.pkl',remake=False,withReco=False):
         RTrelations[rname] =  {'tMinAndTmax':h['tMinAndTmax']}
         for s in h['tMinAndTmax']: RTrelations[rname]['rt'+s] = h['rt'+s]
         fpkl=open(database,'w')
+
+        wall_time_start = time.time()
+        cpu_time_start = time.clock()
+
         pickle.dump(RTrelations,fpkl)
         fpkl.close()
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='writing_muflux_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
     else:
         h['tMinAndTmax'] = RTrelations[rname]['tMinAndTmax']
         for s in h['tMinAndTmax']: h['rt'+s] = RTrelations[rname]['rt'+s]
@@ -7684,7 +7765,16 @@ if options.command == "":
     elif sTree.GetCurrentFile().GetKey('RT'):
         importRTrel()
     elif os.path.exists(database):
+
+        wall_time_start = time.time()
+        cpu_time_start = time.clock()
+
         RTrelations = pickle.load(open(database))
+
+        cpu_time_end = time.clock()
+        wall_time_end = time.time()
+        logger.info(msg='loading_RTrelations%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+
         if not RTrelations.has_key(rname):
             print "You should run init() to determine the RT relations or use _RT file"
         else:

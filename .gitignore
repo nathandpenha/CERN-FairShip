@@ -54,3 +54,7 @@ lcgenv.sh
 # Eclipse
 *.project
 *.pydevproject
+
+# Test
+conditionsDatabase/**/.cache/
+

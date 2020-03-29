@@ -3,7 +3,7 @@
 import os
 import sys
 import yaml
-from databases.mongodb.mongodb import MongoToCDBAPIAdapter
+from databases.mongodb.mongodbadapter import MongoToCDBAPIAdapter
 
 ### This class creates an instance of the specified database API.
 class APIFactory:

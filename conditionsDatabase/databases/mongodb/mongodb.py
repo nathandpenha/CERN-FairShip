@@ -605,23 +605,29 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Convert the internal Condition object to a generic Python dict type
         return loads(condition.to_json())
 
-    def get_conditions_by_name_and_validity(self, detector_id, name, date):
+    def get_conditions_by_name_and_validity(self, detector_id, name, start_date, end_date = None):
         # Input validation
         if not self.__validate_str(detector_id):
             raise TypeError(
                 "Please pass the correct type of input: detector_id")
 
-        if not (self.__validate_str(name) and self.__validate_interval_parameters(date)):
+        if not (self.__validate_str(name) and
+                self.__validate_interval_parameters(start_date) and
+                (self.__validate_interval_parameters(end_date) or end_date is None)):
             raise TypeError("Please pass the valid input type: name should be String, "
                             "date could be either Date or String type.")
         # Input sanitization
         name = self.__sanitize_str(name)
 
         # Converting all dates given as a String to a datetime Object
-        if self.__validate_str(date):
-            date = self.__convert_date(date)
-        elif self.__validate_datetime(date):
-            date = date.replace(microsecond=0)  # Strip off the microseconds
+        if self.__validate_str(start_date):
+            start_date = self.__convert_date(start_date)
+        elif self.__validate_datetime(start_date):
+            start_date = start_date.replace(microsecond=0)  # Strip off the microseconds
+        if self.__validate_str(end_date):
+            end_date = self.__convert_date(end_date)
+        elif self.__validate_datetime(end_date):
+            end_date = end_date.replace(microsecond=0)  # Strip off the microseconds
 
         # Get the detector of the specified detector_id
         try:
@@ -644,15 +650,21 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Loop over all conditions and check whether they are valid at the specified date
         result_list = []
         for condition in conditions:
-            if condition.valid_since <= date <= condition.valid_until:
-                result_list.append(condition)
-
+            # Check if start_date is within the condition validation range
+            if condition.valid_since <= start_date <= condition.valid_until:
+                # Check if end_date is set
+                if end_date is not None:
+                    # If end_date is specified it should also be withing the condition validation range
+                    if condition.valid_since <= end_date <= condition.valid_until:
+                        result_list.append(condition)
+                else:
+                    result_list.append(condition)
         if not result_list:
             return None
 
         # Convert the internal Condition object(s) to a generic Python dict type
         condition_dicts = []
-        for condition in conditions:
+        for condition in result_list:
             condition_dicts.append(loads(condition.to_json()))
         return condition_dicts
 

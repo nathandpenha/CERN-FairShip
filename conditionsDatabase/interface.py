@@ -111,12 +111,15 @@ class APIInterface(_ABC): # For Python 3 we could use 'metaclass=ABCMeta'
     #                           condition must be retrieved (i.e. 'muonflux/straw_tubes').
     #   @param  name:           String specifying the name of the conditions to be retrieved (e.g.
     #                           'strawPositions').
-    #   @param  date:           Timestamp specifying a date/time for which conditions must be valid.
+    #   @param  start_date:     Timestamp specifying a start of a date/time range for which conditions must be valid.
     #                           Can be of type String or datetime.
+    #   @param  end_date:       (optional) Timestamp specifying the end of a date/time range for which conditions must be valid.
+    #                           If not specified then we will query for validity on the start_date.
+    #                           Can be of type String or datetime
     #   @throw  TypeError:      If input type is not as specified.
     #   @throw  ValueError:     If detector_id does not exist.
     @abstractmethod
-    def get_conditions_by_name_and_validity(self, detector_id, name, date):
+    def get_conditions_by_name_and_validity(self, detector_id, name, start_date, end_date=None):
         pass
 
     ### Returns a condition dictionary of a specific condition belonging to a detector,

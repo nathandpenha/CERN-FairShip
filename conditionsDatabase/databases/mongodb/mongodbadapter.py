@@ -213,10 +213,12 @@ class MongoToCDBAPIAdapter(APIInterface):
         # if we add detector
         if not self.__validate_str(name):
             raise TypeError("Please pass the correct type of input: name should be String")
-        if name == "": #Detector names cannot be empty string
+        # Detector names cannot be empty string
+        if name == "":
             raise ValueError("Please pass the correct value of input: name should not "
                              "be an empty string")
-        if '/' in name:  # if a / is in the name parameter we raise ValueError Exception
+        # if a / is in the name parameter we raise ValueError Exception
+        if '/' in name:
             raise ValueError("The name parameter cannot contain a / ")
 
         # This executes when trying to add a root level detector and wrapper
@@ -227,7 +229,8 @@ class MongoToCDBAPIAdapter(APIInterface):
                 detector.name = name
                 wrapper.detector = detector
                 wrapper.save()
-            else:  # if the wrapper does not exist we execute else
+            # if the wrapper does not exist we execute else
+            else:
                 raise ValueError("The wrapper/detector " + name + " already exists")
 
         # if we add subdetector
@@ -266,7 +269,8 @@ class MongoToCDBAPIAdapter(APIInterface):
             detector_wrapper_list = DetectorWrapper.objects.all()
             for wrapper in detector_wrapper_list:
                 detector_list.append(str(wrapper.detector.name))
-        else:  # this executes when a particular parent_id is provided.
+        # this executes when a particular parent_id is provided.
+        else:
             if not self.__validate_path(parent_id):
                 raise TypeError("Please pass the correct type of input: parent_id, "
                                 "parent_id should be of String type")
@@ -307,15 +311,8 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Convert the internal Detector object to a generic Python dict type
         return loads(detector.to_json())
 
-    def add_condition(self,
-                      detector_id,
-                      name,
-                      tag,
-                      values,
-                      type=None,
-                      collected_at=datetime.now(),
-                      valid_since=datetime.now(),
-                      valid_until=datetime.max):
+    def add_condition(self, detector_id, name, tag, values, type=None,
+                      collected_at=datetime.now(), valid_since=datetime.now(), valid_until=datetime.max):
         if detector_id == "" or name == "" or tag == "" or collected_at == "":
             raise TypeError("Please pass the correct parameters: parameters detector_id, name, "
                             "tag, collected_at should not be empty strings")
@@ -587,7 +584,7 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Convert the internal Condition object to a generic Python dict type
         return loads(condition.to_json())
 
-    def get_conditions_by_name_and_validity(self, detector_id, name, start_date, end_date = None):
+    def get_conditions_by_name_and_validity(self, detector_id, name, start_date, end_date=None):
         # Input validation
         if not self.__validate_str(detector_id):
             raise TypeError(
@@ -691,13 +688,8 @@ class MongoToCDBAPIAdapter(APIInterface):
         except DoesNotExist:
             return None
 
-    def update_condition_by_name_and_tag(self,
-                                         detector_id,
-                                         name,
-                                         tag,
-                                         type=None,
-                                         valid_since=None,
-                                         valid_until=None):
+    def update_condition_by_name_and_tag(self, detector_id, name, tag,
+                                         type=None, valid_since=None, valid_until=None):
         # Input validation
         if not self.__validate_str(detector_id):
             raise TypeError(
@@ -717,11 +709,13 @@ class MongoToCDBAPIAdapter(APIInterface):
         if self.__validate_str(valid_until):
             valid_until = self.__convert_date(valid_until)
         elif self.__validate_datetime(valid_until):
-            valid_until = valid_until.replace(microsecond=0)  # Strip off the microseconds
+            # Strip off the microseconds
+            valid_until = valid_until.replace(microsecond=0)
         if self.__validate_str(valid_since):
             valid_since = self.__convert_date(valid_since)
         elif self.__validate_datetime(valid_since):
-            valid_since = valid_since.replace(microsecond=0)  # Strip off the microseconds
+            # Strip off the microseconds
+            valid_since = valid_since.replace(microsecond=0)
 
         if valid_until is not None and valid_since is not None:
             if valid_since > valid_until:
@@ -730,7 +724,8 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Input sanitization
         name = self.__sanitize_str(name)
         tag = self.__sanitize_str(tag)
-        if type is not None: type = self.__sanitize_str(type)
+        if type is not None:
+            type = self.__sanitize_str(type)
 
         # Get the detector of the specified detector_id
         try:

@@ -328,7 +328,7 @@ class MongoToCDBAPIAdapter(APIInterface):
         if not (
                 (self.__validate_interval_parameters(valid_since) or valid_until is None)
                 and (self.__validate_interval_parameters(valid_until) or valid_until is None)
-                and self.__validate_interval_parameters(collected_at)
+                and (self.__validate_interval_parameters(collected_at) or collected_at is None)
         ):
             raise TypeError(
                 "Please pass the correct type of input: valid_since, valid_until and collected_at "
@@ -724,7 +724,7 @@ class MongoToCDBAPIAdapter(APIInterface):
         # Input sanitization
         name = self.__sanitize_str(name)
         tag = self.__sanitize_str(tag)
-        if type is not None:
+        if self.__validate_str(type):
             type = self.__sanitize_str(type)
 
         # Get the detector of the specified detector_id
@@ -747,7 +747,7 @@ class MongoToCDBAPIAdapter(APIInterface):
         except DoesNotExist:
             raise ValueError("No condition with this name and tag can be found")
 
-        if type is not None:
+        if self.__validate_str(type):
             condition.type = type
         if valid_since is not None:
             condition.valid_since = valid_since

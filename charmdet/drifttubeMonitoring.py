@@ -180,6 +180,7 @@ daniel = {}
 # For T1 and 2, the survey target is placed above/below the endplates, offset in y. 
 # For T3 it is placed 7cm in front and for T4 7cm behind the endplate, so there is an offset in z
 
+#benchmarking: calculate time for getting daniel and survey conditions data
 wall_time_start = time.time()
 cpu_time_start = time.clock()
 
@@ -4629,6 +4630,10 @@ slopeY = {2:[0,0,0,0]}
 withCorrections=True
 if MCdata: withCorrections=False
 if withCorrections:
+    #calculate time for getting alignCorrection
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
+
     alignCorrection[0]=[ 0, 0, 0]   # by hand
     alignCorrection[1]=[ 0, 0, 0]
     alignCorrection[2]=[ 0, 0, 0]
@@ -4666,6 +4671,10 @@ if withCorrections:
     alignCorrection[29]=[ 0.0, 0, 0]
     alignCorrection[30]=[ 0.0, 0, 0]
     alignCorrection[31]=[ 0.0, 0, 0]
+
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='alignCorrection%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 
     slopeX = {2:[-0.001,-0.001,-0.001,-0.001],
               3:[-0.0048,-0.0048,-0.0048,-0.0048]} # 7Feb
@@ -5432,7 +5441,7 @@ def makeAlignmentConstantsPersistent():
         vbot,vtop = strawPositionsBotTop[straw]
         strawPositionsP[straw]={'top':[vtop[0],vtop[1],vtop[2]],'bot':[vbot[0],vbot[1],vbot[2]]}
     alignConstants={'strawPositions':strawPositionsP,'alignCorrection':alignCorrection}
-
+    #benchmarking: calculate time required for dumping "alignConstants"
     wall_time_start = time.time()
     cpu_time_start = time.clock()
 
@@ -5453,25 +5462,21 @@ def importAlignmentConstants():
             strawPositionsBotTop[hit.GetDetectorID()]=correctAlignment(hit)
         print "importing alignment constants from code"
         return
-
+    #benchmarking: calculate time required for unpickling "alignConstants"
     wall_time_start = time.time()
     cpu_time_start = time.clock()
-
     upkl    = Unpickler(sTree.GetCurrentFile())
     try:
-
         alignConstants = upkl.load('alignConstants')
-
         cpu_time_end = time.clock()
         wall_time_end = time.time()
         logger.info(msg='importAlignmentConstants from file%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
-
         print "importing alignment constants from file",sTree.GetCurrentFile().GetName()
         strawPosition()
     except:
         print "loading of alignment constants failed for file",sTree.GetCurrentFile().GetName()
 def importRTrel():
-
+    #benchmarking: calculate time required for importing RTrelations
     wall_time_start = time.time()
     cpu_time_start = time.clock()
 
@@ -7694,7 +7699,7 @@ def recoStep0():
     RTrelations =  {'tMinAndTmax':h['tMinAndTmax']}
     for s in h['tMinAndTmax']: RTrelations['rt'+s] = h['rt'+s]
     makeRTrelPersistent(RTrelations)
-def recoStep1(PR=11):
+def recoStep1(PR=11,cpu_time_start=time.clock(), wall_time_start=time.time()):
 # make fitted tracks  
     #disableBranches()
     global MCdata
@@ -7740,9 +7745,13 @@ def recoStep1(PR=11):
     ftemp=sTree.GetCurrentFile()
     ftemp.Write("",ROOT.TFile.kOverwrite)
     ftemp.Close()
-    print "finished adding fitted tracks",options.listOfFiles
+    # Benchmarking: calculate time required for executing recoStep1 (start times via function params)
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='recoStep1%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+    print "finished adding fitted tracks", options.listOfFiles
     print "make suicid"
-    os.system('kill '+str(os.getpid()))
+    os.system('kill ' + str(os.getpid()))
 def getParOfRTcorrectio():
  keys = h.keys()
  for x in keys:
@@ -7753,7 +7762,7 @@ def getParOfRTcorrectio():
            txt+=" %7.5F, "%(x)
         txt+=']'
         print txt.replace(', ]',']')
-def recoStep2():
+def recoStep2(cpu_time_start, wall_time_start):
 # refit tracks with improved RT relation
     global MCdata
     fGenFitArray = ROOT.TClonesArray("genfit::Track") 
@@ -7761,7 +7770,7 @@ def recoStep2():
     fitTracks   = sTree.Branch("FitTracks_refitted", fGenFitArray,32000,-1)
     fTrackInfoArray = ROOT.TClonesArray("TrackInfo")
     fTrackInfoArray.BypassStreamer(ROOT.kTRUE)
-    TrackInfos      = sTree.Branch("TrackInfos_refitted", fTrackInfoArray,32000,-1)
+    TrackInfos = sTree.Branch("TrackInfos_refitted", fTrackInfoArray,32000,-1)
     if sTree.GetBranch('MCTrack'): MCdata = True
     for n in range(sTree.GetEntries()):
         if n%10000==0: print "Now at event",n,"of",sTree.GetEntries(),sTree.GetCurrentFile().GetName(),time.ctime()
@@ -7781,9 +7790,13 @@ def recoStep2():
     ftemp=sTree.GetCurrentFile()
     ftemp.Write("",ROOT.TFile.kOverwrite)
     ftemp.Close()
-    print "finished adding fitted tracks",options.listOfFiles
+    # Benchmarking: calculate time required for executing recoStep2 (start times via function params)
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='recoStep2%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
+    print "finished adding fitted tracks", options.listOfFiles
     print "make suicid"
-    os.system('kill '+str(os.getpid()))
+    os.system('kill ' + str(os.getpid()))
 def recoMuonTaggerTracks():
     global MCdata
     global sTree
@@ -7873,7 +7886,9 @@ if options.command == "":
     print " --- printScalers()"
     print " --- init(): outdated! do boostrapping, determine RT relation using fitted tracks, do plotBiasedResiduals and plotRPCExtrap with TDC"
     print " --- momResolution(), with MC data"
-
+    #benchmarking: calculate time required for running drifttubesmonitoring.py without passing any command arguments
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     vetoLayer = []
     database='muflux_RTrelations.pkl'
     if sTree.GetBranch('MCTrack'):
@@ -7899,14 +7914,26 @@ if options.command == "":
             for s in h['tMinAndTmax']: h['rt'+s] = RTrelations[rname]['rt'+s]
     withCorrections = False
     importAlignmentConstants()
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='NoCommand%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 #
 if options.command == "recoStep0":
+    #benchmarking: calculate time required for running recoStep0
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     withTDC=False
     print "make clean TDC distributions"
     importAlignmentConstants()
     recoStep0()
     print "finished making RT relations"
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='recoStep0%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "recoStep1":
+    #benchmarking: calculate time required for running this script by passing recoStep1 as argument
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     if sTree.GetBranch('MCTrack'):
         MCdata = True
         withDefaultAlignment = True
@@ -7920,8 +7947,11 @@ elif options.command == "recoStep1":
         withCorrections = True  
     print "add fitted tracks"
     importAlignmentConstants()
-    recoStep1(PR=11)
+    recoStep1(PR=11,cpu_time_start = cpu_time_start, wall_time_start = wall_time_start)
 elif options.command == "recoStep2":
+    #benchmarking: calculate time required for running this script by passing recoStep2 as argument
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     if sTree.GetBranch('MCTrack'):
         MCdata = True
         withDefaultAlignment = True
@@ -7935,8 +7965,11 @@ elif options.command == "recoStep2":
         withCorrections = True  
     print "add refitted tracks"
     importAlignmentConstants()
-    recoStep2()
+    recoStep2(cpu_time_start, wall_time_start)
 elif options.command == "anaResiduals":
+    #benchmarking: calculate time required for running this script by "anaResiduals" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     ROOT.gROOT.SetBatch(True)
     if sTree.GetEntries()>0:
         if sTree.GetBranch('MCTrack'):
@@ -7948,7 +7981,13 @@ elif options.command == "anaResiduals":
         anaResiduals()
         print "finished with analysis step",options.listOfFiles
     else: print "no events, exit ",sTree.GetCurrentFile()
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='anaResiduals%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "alignment":
+    #benchmarking: calculate time required for running this script by "alignment" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     ROOT.gROOT.SetBatch(True)
     if sTree.GetBranch('MCTrack'):
         MCdata = True
@@ -7965,22 +8004,43 @@ elif options.command == "alignment":
     plotBiasedResiduals(PR=13,minP=10)
     ut.writeHists(h,'histos-residuals-'+rname)
     hitMapsFromFittedTracks()
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='alignment%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "plotResiduals":
+    #benchmarking: calculate time required for running this script by "plotResiduals" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     print "reading histograms with residuals"
     ut.readHists(h,options.listOfFiles)
     plotBiasedResiduals(onlyPlotting=True)
     if h.has_key('RPCResY_10'):
         plotRPCExtrap(onlyPlotting=True)
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='plotResiduals%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "recoMuonTaggerTracks":
+    #benchmarking: calculate time required for running this script by "recoMuonTaggerTracks" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     importAlignmentConstants()
     recoMuonTaggerTracks()
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='recoMuonTaggerTracks%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "momResolution":
+    #benchmarking: calculate time required for running this script by "momResolution" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     MCdata = True
     withDefaultAlignment = True
     sigma_spatial = 0.25
     withCorrections = False
     importAlignmentConstants()
     momResolution(PR=1,onlyPlotting=False)
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='momResolution%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 elif options.command == "splitOffBoostedEvents": splitOffBoostedEvents()
 elif options.command == "countTracks": countTracks()
 elif options.command == "plotDTPoints":   plotDTPoints()
@@ -7996,6 +8056,9 @@ elif options.command == "studyDeltaRays":
 elif options.command == "MCJpsiProd":
     MCJpsiProd() 
 elif options.command == "test":
+    #benchmarking: calculate time required for running this script by "test" argument as command
+    cpu_time_start = time.clock()
+    wall_time_start = time.time()
     yep.start('output.prof')
     for x in sTree.GetListOfBranches(): sTree.SetBranchStatus(x.GetName(),0)
     # sTree.SetBranchStatus('RPCTrackY',1)
@@ -8004,4 +8067,7 @@ elif options.command == "test":
         rc=sTree.GetEvent(n)
     yep.stop()
     print "finished"
+    cpu_time_end = time.clock()
+    wall_time_end = time.time()
+    logger.info(msg='test%15.6f%13.6f' % (wall_time_end - wall_time_start, cpu_time_end - cpu_time_start))
 #alignConstants.pop('strawPositions') # if recorded alignment constants should not be used.
